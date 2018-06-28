@@ -30,6 +30,7 @@ const {
   faTimes
 } = require('@fortawesome/fontawesome-free-solid')
 const analytics = require('../../../modules/analytics')
+const actions = require('./actions.js')
 
 /**
  * @summary Font awesome icon constants
@@ -279,9 +280,13 @@ class Wifi extends React.PureComponent {
     super(props)
 
     this.state = {
+      loading: true,
       page: 'list',
       isWifiEnabled: true,
-      showPassphrase: false
+      showPassphrase: false,
+      selectedEdit: {},
+      currentNetwork: {},
+      networkList: []
     }
 
     this.browse = this.browse.bind(this)
@@ -290,11 +295,6 @@ class Wifi extends React.PureComponent {
   }
 
   render () {
-    const currentConnection = mockWifiCtrl.getCurrentConnection()
-    const connections = mockWifiCtrl.getAvailableConnections().filter((connection) => {
-      return connection.ssid !== _.get(currentConnection, [ 'ssid' ])
-    })
-
     if (this.state.page === 'list') {
       return (
         <rendition.Provider style={ rootStyles }>
@@ -311,20 +311,20 @@ class Wifi extends React.PureComponent {
               <rendition.DeleteButton onClick={ this.props.close } />
             </Corner>
           </Header>
-          <Main>
+          {!this.state.loading && this.state.isWifiEnabled && <Main>
             <Connection
-              connection={ currentConnection }
+              connection={ this.state.currentNetwork }
               selected
               configureConnection={ _.partial(this.browse, 'configure') } />
             <rendition.Divider color={ colors.divider } />
             <div> {
-              connections.map((connection) => {
+              this.state.networkList.map((connection) => {
                 return (
                   <Connection onClick={ this.connect } connection={ connection } />
                 )
               })
             } </div>
-          </Main>
+          </Main>}
           <Footer close={ this.props.close } />
         </rendition.Provider>
       )
@@ -346,7 +346,7 @@ class Wifi extends React.PureComponent {
             </Corner>
           </Header>
           <Main>
-            <rendition.Heading.h4 bold>{ currentConnection.ssid }</rendition.Heading.h4>
+            <rendition.Heading.h4 bold>{ this.state.selectedEdit.ssid }</rendition.Heading.h4>
             <Label>
               <div>WIFI PASSPHRASE</div>
               <rendition.Input
@@ -374,12 +374,39 @@ class Wifi extends React.PureComponent {
   }
 
   componentDidMount () {
-    // - Check if WiFi is enabled
-    // - Grab available connections
+    if (this.state.isWifiEnabled) {
+      actions.getNetworks()
+      .then((networkList) => {
+        actions.getCurrentNetwork()
+        .then((currentNetwork) => {
+          this.setState({
+            loading: false,
+            networkList: _.reject(networkList, { ssid: currentNetwork.ssid }),
+            currentNetwork
+          })
+        })
+      })
+      .catch((err) => {
+        console.log('err?', err)
+      })
+    }
   }
 
-  connect (connection) {
-    mockWifiCtrl.connect(connection)
+  connect (network) {
+    console.log('network', network)
+    actions.connect(network)
+    .then((success) => {
+      if (success) {
+        this.setState({
+          currentNetwork: network
+        })
+      } else {
+        console.log('Could not connect to network ' + network.ssid)
+      }
+    })
+    .catch((err) => {
+      console.log('err?', err)
+    })
   }
 
   browse (page) {
@@ -395,17 +422,19 @@ class Wifi extends React.PureComponent {
   }
 
   toggleWifi () {
+    const newState = !this.state.isWifiEnabled
     analytics.logEvent('Wifi toggle', {
-      isWifiEnabled: !this.state.isWifiEnabled
+      isWifiEnabled: newState
     })
 
-    if (this.state.isWifiEnabled) {
-      mockWifiCtrl.disable()
-    } else {
-      mockWifiCtrl.enable()
-    }
-
-    this.setState({ isWifiEnabled: !this.state.isWifiEnabled })
+    actions.toggleWifi(newState)
+    .then((value) => {
+      this.setState({ isWifiEnabled: !this.state.isWifiEnabled })
+    })
+    .catch((err) => {
+      console.log('err', err)
+      // handle errors
+    })
   }
 
   togglePassphraseVisibility () {
