@@ -19,8 +19,18 @@
 const _ = require('lodash')
 const React = require('react')
 const propTypes = require('prop-types')
-const rendition = require('rendition')
-const { default: styled } = require('styled-components')
+const {
+  Alert,
+  Button,
+  Container,
+  DeleteButton,
+  Divider,
+  Heading,
+  Input,
+  Provider,
+  Txt
+} = require('rendition')
+const styled = require('styled-components').default
 const fontAwesome = require('@fortawesome/fontawesome')
 const {
   faWifi,
@@ -31,6 +41,7 @@ const {
 } = require('@fortawesome/fontawesome-free-solid')
 const analytics = require('../../../modules/analytics')
 const actions = require('./actions.js')
+const KBInput = require('./keyboard/index.jsx')
 
 /**
  * @summary Font awesome icon constants
@@ -91,16 +102,16 @@ const mockWifiCtrl = {
 const ToggleButton = styled((props) => {
   return (
     <div className={ props.className }>
-      <rendition.Txt
+      <Txt
         color={ props.toggle ? colors.divider : 'black' }
-        bold={ !props.toggle }>Off</rendition.Txt>
+        bold={ !props.toggle }>Off</Txt>
       <label>
         <div></div>
         <input type="checkbox" onClick={ props.onClick } checked={ props.toggle } />
       </label>
-      <rendition.Txt
+      <Txt
         color={ props.toggle ? 'black' : colors.divider }
-        bold={ props.toggle }>On</rendition.Txt>
+        bold={ props.toggle }>On</Txt>
     </div>
   )
 })`
@@ -114,7 +125,7 @@ const ToggleButton = styled((props) => {
     padding: 0.1em;
     margin: 0 6px;
     border-radius: 1.2em;
-    background-color: ${ props => props.toggle ? props.primaryColor : props.secondaryColor }
+    background-color: ${(props) => { return props.toggle ? props.primaryColor : props.secondaryColor }}
     cursor: pointer;
     transition: 0.1s all ease-out;
   }
@@ -123,8 +134,8 @@ const ToggleButton = styled((props) => {
     width: 1em;
     height: 1em;
     border-radius: 1em;
-    background-color: ${ props => props.knobColor };
-    margin-left: ${ props => props.toggle ? '0.8em' : '0' };
+    background-color: ${(props) => { return props.knobColor }};
+    margin-left: ${(props) => { return props.toggle ? '0.8em' : '0' }};
     transition: 0.1s all ease-out;
   }
 
@@ -133,31 +144,31 @@ const ToggleButton = styled((props) => {
   }
 `
 
-const Connection = styled((props) => {
+const ConnectionUnstyled = styled((props) => {
   const isOpen = _.get(props, [ 'connection', 'security' ]) === 'open'
   const configureButton = (
-    <rendition.Button
-      onClick={ () => props.configureConnection(props.connection) }
+    <Button
+      onClick={ () => { return props.configureConnection(props.connection) }}
       plaintext
       primary>
       <span dangerouslySetInnerHTML={ { __html: faWrenchHTML } } />
-      <rendition.Txt bold>Configuration</rendition.Txt>
-    </rendition.Button>
+      <Txt bold>Configuration</Txt>
+    </Button>
   )
 
   const labelElem = props.onClick
     ? (
-      <rendition.Button
-        onClick={ () => props.onClick(props.connection) }
+      <Button
+        onClick={ () => { return props.onClick(props.connection) }}
         bold={ props.selected }
         plaintext>
         { props.connection.ssid }
-      </rendition.Button>
+      </Button>
     )
     : (
-      <rendition.Txt bold={ props.selected }>
+      <Txt bold={ props.selected }>
         { props.connection.ssid }
-      </rendition.Txt>
+      </Txt>
     )
 
   return (
@@ -170,7 +181,8 @@ const Connection = styled((props) => {
       { props.selected ? configureButton : null }
     </div>
   )
-})`
+})
+const Connection = ConnectionUnstyled `
   display: flex;
   align-items: stretch;
   height: 30px;
@@ -186,14 +198,14 @@ const Connection = styled((props) => {
   }
 
   > span:first-of-type {
-    color: ${props => props.selected ? colors.activeGreen : null };
+    color: ${(props) => { return props.selected ? colors.activeGreen : null }};
   }
 
   > span:last-of-type,
   > button:first-of-type:not(:last-of-type),
   > div:first-of-type,
   > button:last-of-type {
-    background-color: ${ props => props.selected ? colors.activeGray : 'transparent' };
+    background-color: ${(props) => { return props.selected ? colors.activeGray : 'transparent' }};
   }
 
   > span:first-of-type {
@@ -234,28 +246,28 @@ const Connection = styled((props) => {
   }
 `
 
-const Header = styled.div`
+const Header = styled.div `
   display: flex;
   justify-content: space-between;
   flex: 0 0 auto;
   margin: 20px 42px 35px 0;
 `
 
-const Main = styled.div`
+const Main = styled.div `
   flex: 1;
 `
 
 const Footer = styled((props) => {
   return (
-    <rendition.Container className={ props.className } align="center">
-      <rendition.Button emphasized primary w={ 200 } onClick={ props.close }>OK</rendition.Button>
-    </rendition.Container>
+    <Container className={ props.className } align="center">
+      <Button emphasized primary w={ 200 } onClick={ props.close }>{props.text || 'OK'}</Button>
+    </Container>
   )
 })`
   flex: 0 0 auto;
 `
 
-const Label = styled.label`
+const Label = styled.label `
   margin: 30px 0.5em 12px 0;
   
   > div {
@@ -265,7 +277,7 @@ const Label = styled.label`
   }
 `
 
-const Corner = styled.div`
+const Corner = styled.div `
   position: absolute;
   top: 5px;
   right: 5px;
@@ -275,31 +287,47 @@ const Corner = styled.div`
   }
 `
 
+/**
+ * Wifi modal react component
+ */
 class Wifi extends React.PureComponent {
+  /**
+   *
+   * @param {*} props - Component's props
+   *
+   * @example <wifi-modal/>
+   */
   constructor (props) {
     super(props)
 
     this.state = {
       loading: true,
       page: 'list',
-      isWifiEnabled: true,
+      isWifiEnabled: false,
       showPassphrase: false,
-      selectedEdit: {},
       currentNetwork: {},
       networkList: []
     }
 
+    this.selectedEdit = {}
     this.browse = this.browse.bind(this)
     this.toggleWifi = this.toggleWifi.bind(this)
     this.togglePassphraseVisibility = this.togglePassphraseVisibility.bind(this)
   }
 
+  /**
+   * Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
   render () {
     if (this.state.page === 'list') {
       return (
-        <rendition.Provider style={ rootStyles }>
+        <Provider style={ rootStyles }>
           <Header>
-            <rendition.Heading.h3 bold>WiFi</rendition.Heading.h3>
+            <Heading.h3 bold>WiFi</Heading.h3>
             <ToggleButton
               toggle={ this.state.isWifiEnabled }
               onClick={ this.toggleWifi }
@@ -308,107 +336,193 @@ class Wifi extends React.PureComponent {
               knobColor={ 'white' }
             />
             <Corner>
-              <rendition.DeleteButton onClick={ this.props.close } />
+              <DeleteButton onClick={ this.props.close } />
             </Corner>
           </Header>
           {!this.state.loading && this.state.isWifiEnabled && <Main>
-            <Connection
+            {!_.isEmpty(this.state.currentNetwork) && <div><Connection
               connection={ this.state.currentNetwork }
               selected
-              configureConnection={ _.partial(this.browse, 'configure') } />
-            <rendition.Divider color={ colors.divider } />
-            <div> {
-              this.state.networkList.map((connection) => {
-                return (
-                  <Connection onClick={ this.connect } connection={ connection } />
-                )
-              })
-            } </div>
+              configureConnection={ this.configureNetwork(this.state.currentNetwork).bind(this) } />
+            <Divider color={ colors.divider } /></div> }
+            <div>
+              { _.chain(this.state.networkList)
+                .reject({ ssid: this.state.currentNetwork.ssid })
+                .map((connection) => {
+                  return (
+                    <Connection
+                      onClick={ this.configureNetwork(connection).bind(this) }
+                      connection={ connection } />
+                  )
+                }) }
+            </div>
           </Main>}
-          <Footer close={ this.props.close } />
-        </rendition.Provider>
+          <Footer close={ this.props.close } text="Close"/>
+        </Provider>
       )
     }
 
     if (this.state.page === 'configure') {
       return (
-        <rendition.Provider style={ rootStyles }>
+        <Provider style={ rootStyles }>
           <Header>
-            <rendition.Button
+            <Button
               onClick={ _.partial(this.browse, 'list') }
               bg={ colors.activeGray }
               color={ colors.textBlack }>
               <span dangerouslySetInnerHTML={ { __html: faAngleLeftHTML } } />&nbsp;
               Back
-            </rendition.Button>
+            </Button>
             <Corner>
-              <rendition.DeleteButton onClick={ this.props.close } />
+              <DeleteButton onClick={ this.props.close } />
             </Corner>
           </Header>
           <Main>
-            <rendition.Heading.h4 bold>{ this.state.selectedEdit.ssid }</rendition.Heading.h4>
+            <Heading.h4 bold>{ this.selectedEdit.ssid }</Heading.h4>
             <Label>
               <div>WIFI PASSPHRASE</div>
-              <rendition.Input
+              <KBInput
+                key="network-name"
+                value={ this.selectedEdit.passphrase }
                 type={ this.state.showPassphrase ? 'input' : 'password' }
                 placeholder="Empty"
-              />
+                onChange={(value) => {
+                  if (!_.isEmpty(value) && value !== this.selectedEdit.passphrase) {
+                    this.selectedEdit.passphrase = value
+                    this.setState({ selectedEdit: _.assign({}, this.selectedEdit, { passphrase: value }) })
+                  }
+                }}/>
             </Label>
-            <rendition.Button
+            <Button
               bg={ 'transparent' }
               color={ colors.divider }
               onClick={ this.togglePassphraseVisibility }
               plaintext>
               { this.state.showPassphrase ? 'Hide' : 'Show' }
-            </rendition.Button>
-            <rendition.Divider color={ colors.divider } />
-            <rendition.Button danger plaintext>
+            </Button>
+            <Divider color={ colors.divider } />
+            <Button danger plaintext onClick={this.forget(this.selectedEdit).bind(this)}>
               <span dangerouslySetInnerHTML={ { __html: faTimesHTML } } />&nbsp;
               Forget network
-            </rendition.Button>
+            </Button>
           </Main>
-          <Footer close={ this.props.close } />
-        </rendition.Provider>
+          <Footer close={this.closeConfiguration.bind(this)} />
+        </Provider>
       )
     }
+
+    return (<div></div>)
   }
 
+  /**
+   * Miao
+   *
+   * @example Miao
+   */
   componentDidMount () {
-    if (this.state.isWifiEnabled) {
-      actions.getNetworks()
-      .then((networkList) => {
-        actions.getCurrentNetwork()
-        .then((currentNetwork) => {
-          this.setState({
-            loading: false,
-            networkList: _.reject(networkList, { ssid: currentNetwork.ssid }),
-            currentNetwork
-          })
+    // Check if wifi is active
+    actions.isActive()
+      .then((active) => {
+        if (active) {
+          Promise.all([
+            actions.getNetworks(),
+            actions.getCurrentNetwork()
+          ])
+            .then(([ networkList, currentNetwork ]) => {
+              this.setState({
+                loading: false,
+                isWifiEnabled: active,
+                networkList,
+                currentNetwork
+              })
+            })
+            .catch((err) => {
+              /*
+              Function to set error to the pertaining form control
+              error(formControl, errorMessage)
+              */
+              this.setState({
+                'x-error': err.message
+              })
+              console.log('err???', err)
+            })
+        }
+      })
+  }
+
+  /**
+   * Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
+  toggleWifi () {
+    const newState = !this.state.isWifiEnabled
+    return actions.toggleWifi(newState)
+      .then((active) => {
+        analytics.logEvent('Wifi toggle', {
+          isWifiEnabled: active
         })
+        this.setState({ isWifiEnabled: active })
+      })
+      .catch((err) => {
+        // Handle errors
+        console.log('err', err)
+      })
+  }
+
+  /**
+   * Miao
+   *
+   * @param {*} network - Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
+  connect (network) {
+    return actions.connect(network)
+      .then((success) => {
+        if (success) {
+          this.setState({
+            currentNetwork: network
+          })
+        } else {
+          console.log(`Could not connect to network ${network.ssid}`)
+        }
       })
       .catch((err) => {
         console.log('err?', err)
       })
-    }
   }
 
-  connect (network) {
-    console.log('network', network)
-    actions.connect(network)
-    .then((success) => {
-      if (success) {
-        this.setState({
-          currentNetwork: network
-        })
-      } else {
-        console.log('Could not connect to network ' + network.ssid)
-      }
-    })
-    .catch((err) => {
-      console.log('err?', err)
-    })
+  /**
+   * Miao
+   *
+   * @param {*} network - Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
+  closeConfiguration (network) {
+    return this.connect(this.selectedEdit)
+      .then(() => {
+        this.props.close()
+      })
+      .catch((err) => {
+        console.log('err :(', err)
+      })
   }
 
+  /**
+   * Miao
+   *
+   * @param {*} page - Miao
+   *
+   * @example Miao
+   */
   browse (page) {
     analytics.logEvent('Wifi change page', {
       page
@@ -416,27 +530,56 @@ class Wifi extends React.PureComponent {
     this.setState({ page })
   }
 
+  /**
+   * Miao
+   *
+   * @param {*} connection - Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
   forget (connection) {
-    mockWifiCtrl.disconnect(connection)
-    mockWifiCtrl.remove(connection)
+    return () => {
+      return actions.forget(connection)
+        .then((success) => {
+          const newState = {
+            page: 'list'
+          }
+          if (this.state.currentNetwork.ssid === connection.ssid) {
+            _.assign(newState, { currentNetwork: {} })
+          }
+          this.setState(newState)
+        })
+        .catch((err) => {
+          console.log('err :/', err)
+        })
+    }
   }
 
-  toggleWifi () {
-    const newState = !this.state.isWifiEnabled
-    analytics.logEvent('Wifi toggle', {
-      isWifiEnabled: newState
-    })
-
-    actions.toggleWifi(newState)
-    .then((value) => {
-      this.setState({ isWifiEnabled: !this.state.isWifiEnabled })
-    })
-    .catch((err) => {
-      console.log('err', err)
-      // handle errors
-    })
+  /**
+   * Miao
+   *
+   * @param {*} network - Miao
+   *
+   * @returns {*} Miao
+   *
+   * @example Miao
+   */
+  configureNetwork (network) {
+    return () => {
+      this.selectedEdit = network
+      this.setState({
+        page: 'configure'
+      })
+    }
   }
 
+  /**
+   * Miao
+   *
+   * @example Miao
+   */
   togglePassphraseVisibility () {
     this.setState({ showPassphrase: !this.state.showPassphrase })
   }
