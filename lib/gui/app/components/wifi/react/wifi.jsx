@@ -287,16 +287,7 @@ const Corner = styled.div `
   }
 `
 
-/**
- * Wifi modal react component
- */
 class Wifi extends React.PureComponent {
-  /**
-   *
-   * @param {*} props - Component's props
-   *
-   * @example <wifi-modal/>
-   */
   constructor (props) {
     super(props)
 
@@ -315,13 +306,6 @@ class Wifi extends React.PureComponent {
     this.togglePassphraseVisibility = this.togglePassphraseVisibility.bind(this)
   }
 
-  /**
-   * Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
   render () {
     if (this.state.page === 'list') {
       return (
@@ -354,7 +338,7 @@ class Wifi extends React.PureComponent {
                       onClick={ this.configureNetwork(connection).bind(this) }
                       connection={ connection } />
                   )
-                }) }
+                }).value() }
             </div>
           </Main>}
           <Footer close={ this.props.close } text="Close"/>
@@ -414,49 +398,48 @@ class Wifi extends React.PureComponent {
     return (<div></div>)
   }
 
-  /**
-   * Miao
-   *
-   * @example Miao
-   */
   componentDidMount () {
     // Check if wifi is active
     actions.isActive()
-      .then((active) => {
-        if (active) {
-          Promise.all([
-            actions.getNetworks(),
-            actions.getCurrentNetwork()
-          ])
-            .then(([ networkList, currentNetwork ]) => {
-              this.setState({
-                loading: false,
-                isWifiEnabled: active,
-                networkList,
-                currentNetwork
-              })
-            })
-            .catch((err) => {
-              /*
-              Function to set error to the pertaining form control
-              error(formControl, errorMessage)
-              */
-              this.setState({
-                'x-error': err.message
-              })
-              console.log('err???', err)
-            })
-        }
+      .then(this.handleWifiActive.bind(this))
+      .catch((err) => {
+        console.log('err :(((', err)
       })
   }
 
-  /**
-   * Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
+  handleWifiActive (active) {
+    if (active) {
+      this.setState({
+        loading: false,
+        isWifiEnabled: true,
+      })
+      Promise.all([
+        actions.getNetworks(),
+        actions.getCurrentNetwork()
+      ])
+        .then(this.handleNetworksList.bind(this))
+        .catch(this.handleNetworksListError.bind(this))
+    }
+  }
+
+  handleNetworksList ([ networkList, currentNetwork ]) {
+    this.setState({
+      networkList,
+      currentNetwork
+    })
+  }
+
+  handleNetworksListError (err) {
+    /*
+    Function to set error to the pertaining form control
+    error(formControl, errorMessage)
+    */
+    this.setState({
+      'x-error': err.message
+    })
+    console.log('err???', err)
+  }
+
   toggleWifi () {
     const newState = !this.state.isWifiEnabled
     return actions.toggleWifi(newState)
@@ -464,7 +447,7 @@ class Wifi extends React.PureComponent {
         analytics.logEvent('Wifi toggle', {
           isWifiEnabled: active
         })
-        this.setState({ isWifiEnabled: active })
+        this.handleWifiActive(active)
       })
       .catch((err) => {
         // Handle errors
@@ -472,15 +455,6 @@ class Wifi extends React.PureComponent {
       })
   }
 
-  /**
-   * Miao
-   *
-   * @param {*} network - Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
   connect (network) {
     return actions.connect(network)
       .then((success) => {
@@ -497,16 +471,7 @@ class Wifi extends React.PureComponent {
       })
   }
 
-  /**
-   * Miao
-   *
-   * @param {*} network - Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
-  closeConfiguration (network) {
+  closeConfiguration () {
     return this.connect(this.selectedEdit)
       .then(() => {
         this.props.close()
@@ -516,13 +481,6 @@ class Wifi extends React.PureComponent {
       })
   }
 
-  /**
-   * Miao
-   *
-   * @param {*} page - Miao
-   *
-   * @example Miao
-   */
   browse (page) {
     analytics.logEvent('Wifi change page', {
       page
@@ -530,15 +488,6 @@ class Wifi extends React.PureComponent {
     this.setState({ page })
   }
 
-  /**
-   * Miao
-   *
-   * @param {*} connection - Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
   forget (connection) {
     return () => {
       return actions.forget(connection)
@@ -557,15 +506,6 @@ class Wifi extends React.PureComponent {
     }
   }
 
-  /**
-   * Miao
-   *
-   * @param {*} network - Miao
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
   configureNetwork (network) {
     return () => {
       this.selectedEdit = network
@@ -575,11 +515,6 @@ class Wifi extends React.PureComponent {
     }
   }
 
-  /**
-   * Miao
-   *
-   * @example Miao
-   */
   togglePassphraseVisibility () {
     this.setState({ showPassphrase: !this.state.showPassphrase })
   }

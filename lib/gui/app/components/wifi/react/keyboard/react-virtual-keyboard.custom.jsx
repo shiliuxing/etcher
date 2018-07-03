@@ -1,17 +1,19 @@
 'use strict'
 
-const React = require('react'),
-  { Component } = React.Component
+const React = require('react')
 const PropTypes = require('prop-types')
 const jQuery = require('jquery')
 const keyboard = require('virtual-keyboard/dist/js/jquery.keyboard.js')
 
-class VirtualKeyboard extends Component {
+/**
+ * On-screen keyboard react component
+ */
+class VirtualKeyboard extends React.Component {
   constructor(props) {
     super(props)
 
     this.state = {
-      value: "",
+      value: '',
       className: 'keyboard-wrapper'
     }
   }
@@ -110,11 +112,11 @@ class VirtualKeyboard extends Component {
     return this.keyboardRef.checkValidity()
   }
 
-  handleChange = (event, input) => {
+  handleChange (event, input) {
     if (!input && event && event.target && typeof event.target.value != 'undefined')
       input = event.target.value
     if (this.props.debug) {
-      console.log("Change", input)
+      console.log('Change', input)
     }
     this.setState({
       value: input

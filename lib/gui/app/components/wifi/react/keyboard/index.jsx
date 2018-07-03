@@ -4,25 +4,13 @@ const Types = require('prop-types')
 const React = require('react')
 const Keyboard = require('./react-virtual-keyboard.custom.jsx')
 
-/**
- * Miao
- */
 class KBInput extends React.PureComponent {
-  /**
-   * @example Miao
-   */
   componentDidMount () {
     this.keyboard.interface.keyaction.enter = (base) => {
       return this.keyboard.interface.keyaction.accept(base)
     }
   }
 
-  /**
-   *
-   * @returns {*} Miao
-   *
-   * @example Miao
-   */
   render () {
     return (<Keyboard
       value={this.props.value}
