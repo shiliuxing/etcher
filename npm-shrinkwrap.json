@@ -3542,7 +3542,7 @@
     },
     "etcher-sdk": {
       "version": "0.0.1",
-      "resolved": "git://github.com/resin-io-modules/etcher-sdk.git#babc17ce127beaa71bc2c1ab911c83df08fa5d70",
+      "resolved": "git://github.com/resin-io-modules/etcher-sdk.git#356e40b2190492cec55fd92d58f0cc218cae4ed2",
       "dependencies": {
         "@types/lodash": {
           "version": "4.14.110",
